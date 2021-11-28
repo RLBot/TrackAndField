@@ -44,7 +44,7 @@ class TrackAndField(BaseScript):
 
     def construct_and_load(self, event_doc: EventMeta) -> Event:
         event = self.construct_event(event_doc.event_type)
-        event.load_event(event_doc)
+        event.load_event(event_doc, self.matchcomms, self.game_interface)
         return event
 
     def run(self):
