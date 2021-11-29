@@ -17,6 +17,8 @@ from typing import List
 # How do we choose bots for the event? Can the user just drag bots onto teams
 # in RLBotGUI, start a fake match with the script active, and the script hooks
 # and takes over?
+from spawn_helper import SpawnHelper
+
 
 @dataclass
 class EventMeta(DataClassJSONMixin):
@@ -36,7 +38,7 @@ class EventStatus:
 class Event:
     def __init__(self) -> None:
         self.name: str = None
-        self.matchcomms: MatchcommsClient = None
+        self.spawn_helper: SpawnHelper = None
         self.game_interface: GameInterface = None
         self.competitors: List[Competitor] = []
         self.competition_dir: Path = None
@@ -53,11 +55,11 @@ class Event:
         """
         return None
 
-    def load_event(self, doc: EventMeta, matchcomms: MatchcommsClient, game_interface: GameInterface) -> None:
+    def load_event(self, doc: EventMeta, spawn_helper: SpawnHelper, game_interface: GameInterface) -> None:
         """
         Gets ready to run based on the event data.
         """
-        self.matchcomms = matchcomms
+        self.spawn_helper = spawn_helper
         self.game_interface = game_interface
 
     def tick_event(self, packet: GameTickPacket) -> EventStatus:

@@ -5,12 +5,16 @@ from typing import List, Dict
 
 from mashumaro import DataClassJSONMixin
 from rlbot.agents.base_script import BaseScript
+from rlbot.matchcomms.client import MatchcommsClient
+from rlbot.matchconfig.match_config import MatchConfig
 from rlbot.parsing.bot_config_bundle import get_bot_config_bundle
+from rlbot.setup_manager import SetupManager
 from rlbot_gui.gui import get_team_settings
 
 from competitor import Competitor
 from event import Event, EventMeta
 from events.waypoint_race import WaypointRace
+from spawn_helper import SpawnHelper
 
 
 def load_competitors() -> List[Competitor]:
@@ -34,6 +38,7 @@ class CompetitionDocument(DataClassJSONMixin):
 class TrackAndField(BaseScript):
     def __init__(self, doc: CompetitionDocument):
         super().__init__("Track and Field")
+        self.spawn_helper = SpawnHelper()
         self.competition_document = doc
         self.events: List[Event] = [self.construct_and_load(d) for d in doc.event_documents]
         self.event_index = 0
@@ -44,7 +49,7 @@ class TrackAndField(BaseScript):
 
     def construct_and_load(self, event_doc: EventMeta) -> Event:
         event = self.construct_event(event_doc.event_type)
-        event.load_event(event_doc, self.matchcomms, self.game_interface)
+        event.load_event(event_doc, self.spawn_helper, self.game_interface)
         return event
 
     def run(self):

@@ -2,10 +2,11 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 from random import randint
+from typing import List, Dict
 
 from mashumaro import DataClassJSONMixin
-from rlbot.matchcomms.client import MatchcommsClient
 from rlbot.utils.game_state_util import GameState, CarState
+from rlbot.utils.structures.game_data_struct import GameTickPacket
 from rlbot.utils.structures.game_interface import GameInterface
 
 from competitor import Competitor
@@ -13,8 +14,7 @@ from data_types.physics import Physics
 from data_types.rotator import Rotator
 from data_types.vector3 import Vector3
 from event import Event, EventMeta, EventStatus
-from typing import List, Dict
-from rlbot.utils.structures.game_data_struct import GameTickPacket
+from spawn_helper import SpawnHelper
 
 
 @dataclass
@@ -48,8 +48,8 @@ class WaypointRace(Event):
         self.active_competitor: Competitor = None
         self.competitor_has_begun = False
 
-    def load_event(self, doc: EventMeta, matchcomms: MatchcommsClient, game_interface: GameInterface) -> None:
-        super().load_event(doc, matchcomms, game_interface)
+    def load_event(self, doc: EventMeta, spawn_helper: SpawnHelper, game_interface: GameInterface) -> None:
+        super().load_event(doc, spawn_helper, game_interface)
         doc_text = Path(doc.event_doc_path).read_text()
         self.event_doc = EventDocument.from_json(doc_text)
         self.competitors = [Competitor.from_config_path(p) for p in self.event_doc.competitor_cfg_files]
@@ -79,16 +79,17 @@ class WaypointRace(Event):
     def tick_event(self, packet: GameTickPacket) -> EventStatus:
 
         if self.active_competitor is not None:
-            if not self.competitor_has_begun:
-                # TODO: spawn the car into the match
-                competitor_in_game_index = 0
-                # TODO: start the bot process
-                self.matchcomms.outgoing_broadcast.put_nowait(self.event_doc.race_spec.to_json())
-                cars = {competitor_in_game_index: CarState(
+            if not self.competitor_has_begun and packet.game_info.is_round_active:
+                self.spawn_helper.clear_bots()
+                completed_spawn = self.spawn_helper.spawn_bot(self.active_competitor.bundle)
+                competitor_packet_index = completed_spawn.packet_index
+                self.spawn_helper.matchcomms.outgoing_broadcast.put_nowait(self.event_doc.race_spec.to_json())
+                cars = {competitor_packet_index: CarState(
                     physics=self.event_doc.race_spec.start.to_gamestate(),
                     boost_amount=100
                 )}
                 self.game_interface.set_game_state(GameState(cars=cars))
+                self.competitor_has_begun = True
             else:
                 # TODO: watch the packet and keep track of whether the bot has reached all the waypoints
                 pass
