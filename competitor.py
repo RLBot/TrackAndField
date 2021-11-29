@@ -1,4 +1,4 @@
-from rlbot.parsing.bot_config_bundle import BotConfigBundle
+from rlbot.parsing.bot_config_bundle import BotConfigBundle, get_bot_config_bundle
 
 
 class Competitor:
@@ -8,3 +8,7 @@ class Competitor:
 
     def __init__(self, bundle: BotConfigBundle) -> None:
         self.bundle = bundle
+
+    @staticmethod
+    def from_config_path(path: str):
+        return Competitor(bundle=get_bot_config_bundle(path))
