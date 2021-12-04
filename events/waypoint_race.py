@@ -74,7 +74,7 @@ class WaypointRace(Event):
             velocity=Vector3(0, 0, 0),
             angular_velocity=Vector3(0, 0, 0))
 
-        race_spec = RaceSpecification(waypoints=waypoints, start=start_point, waypoint_tolerance=60)
+        race_spec = RaceSpecification(waypoints=waypoints, start=start_point, waypoint_tolerance=100)
         event_doc = EventDocument(
             race_spec=race_spec,
             competitor_cfg_files=[c.bundle.config_path for c in competitors],
@@ -120,7 +120,8 @@ class WaypointRace(Event):
                         if w.dist(competitor_pos) < race_spec.waypoint_tolerance:
                             self.completed_waypoints_indices.append(idx)
                     color = self.renderer.lime() if idx in self.completed_waypoints_indices else self.renderer.yellow()
-                    self.render_sphere(w, race_spec.waypoint_tolerance, color)
+                    self.render_sphere(w, race_spec.waypoint_tolerance / 2, color)
+                self.render_sphere(competitor_pos, race_spec.waypoint_tolerance / 2, self.renderer.cyan())
                 self.renderer.end_rendering()
                 waypoints_complete = len(self.completed_waypoints_indices) >= len(race_spec.waypoints)
                 if waypoints_complete:
