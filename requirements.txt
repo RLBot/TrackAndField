@@ -1,3 +1,4 @@
 rlbot
 rlbot_gui
 mashumaro
+pynput

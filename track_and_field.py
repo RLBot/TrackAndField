@@ -5,16 +5,15 @@ from typing import List, Dict
 
 from mashumaro import DataClassJSONMixin
 from rlbot.agents.base_script import BaseScript
-from rlbot.matchcomms.client import MatchcommsClient
-from rlbot.matchconfig.match_config import MatchConfig
 from rlbot.parsing.bot_config_bundle import get_bot_config_bundle
-from rlbot.setup_manager import SetupManager
 from rlbot_gui.gui import get_team_settings
 
 from competitor import Competitor
 from event import Event, EventMeta
 from events.waypoint_race import WaypointRace
 from spawn_helper import SpawnHelper
+from ui.on_screen_log import OnScreenLog
+from ui.wait_for_press import KeyWaiter
 
 
 def load_competitors() -> List[Competitor]:
@@ -38,8 +37,8 @@ class CompetitionDocument(DataClassJSONMixin):
 class TrackAndField(BaseScript):
     def __init__(self, doc: CompetitionDocument):
         super().__init__("Track and Field")
-        self.screen_log: List[str] = []
-        self.log_to_screen("Welcome to Track and Field!")
+        self.on_screen_log = OnScreenLog(self.renderer, 4, 20, 20, 2, self.renderer.yellow())
+        self.on_screen_log.log("Welcome to Track and Field!")
         self.spawn_helper = SpawnHelper(self.game_interface)
         self.competition_document = doc
         self.wait_for_game_stabilization()
@@ -47,13 +46,7 @@ class TrackAndField(BaseScript):
         self.event_index = 0
 
     def log_to_screen(self, text: str):
-        self.screen_log.append(text)
-        self.logger.info(text)
-        while len(self.screen_log) > 4:
-            self.screen_log = self.screen_log[1:]
-        self.renderer.begin_rendering("track_n_field_log")
-        self.renderer.draw_string_2d(20, 20, 2, 2, "\n".join(self.screen_log), self.renderer.yellow())
-        self.renderer.end_rendering()
+        self.on_screen_log.log(text)
 
     def wait_for_game_stabilization(self):
         """
@@ -64,9 +57,9 @@ class TrackAndField(BaseScript):
             packet = self.get_game_tick_packet()
             if packet.game_info.is_round_active:
                 time.sleep(1.5)
-                self.log_to_screen("Clearing bots to prepare for track and field.")
+                self.on_screen_log.log("Clearing bots to prepare for track and field.")
                 self.spawn_helper.clear_bots()
-                self.log_to_screen("Bots cleared, waiting for processes to die...")
+                self.on_screen_log.log("Bots cleared, waiting for processes to die...")
                 time.sleep(3)
                 break
             time.sleep(.5)
@@ -81,19 +74,18 @@ class TrackAndField(BaseScript):
         return event
 
     def run(self):
-        self.log_to_screen(f"Running {len(self.events)} track and field events...")
+        self.on_screen_log.log(f"Running {len(self.events)} track and field events...")
         active_event: Event = None
         while True:
             packet = self.wait_game_tick_packet()
 
             if active_event is None:
                 if self.event_index >= len(self.events):
-                    self.log_to_screen("Finished all Track and Field events!")
+                    self.on_screen_log.log("Finished all Track and Field events!")
                     exit(0)
                 active_event = self.events[self.event_index]
-                self.log_to_screen(f"Event: {active_event.name}")
-                # TODO: go into some kindof pause mode until the user
-                # manually advances to the next event with some kind of command.
+                self.on_screen_log.log(f"Event: {active_event.name}")
+                KeyWaiter().wait_for_press('j', f'proceed to {active_event.name}', self.renderer)
 
             event_status = active_event.tick_event(packet)
             if event_status.is_complete:

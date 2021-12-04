@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from random import randint
 from typing import List
@@ -97,8 +98,9 @@ class SpawnHelper:
         self.launch_match(match_config)
 
     def launch_match(self, match_config: MatchConfig):
-        # TODO: This probably leaves behind zombie bot processes. Kill the processes first?
         self.setup_manager.load_match_config(match_config)
         self.setup_manager.start_match()
         self.setup_manager.launch_bot_processes(match_config=match_config)
-        self.setup_manager.try_recieve_agent_metadata()
+        time.sleep(1)  # Give a chance for the agent metadata to arrive
+        num_received = self.setup_manager.try_recieve_agent_metadata()
+        print(f"Got {num_received} agent metadata objects.")

@@ -5,7 +5,7 @@ from random import randint
 from typing import List, Dict
 
 from mashumaro import DataClassJSONMixin
-from rlbot.utils.game_state_util import GameState, CarState
+from rlbot.utils.game_state_util import GameState, CarState, BallState
 from rlbot.utils.structures.game_data_struct import GameTickPacket, PlayerInfo
 from rlbot.utils.structures.game_interface import GameInterface
 
@@ -15,6 +15,7 @@ from data_types.rotator import Rotator
 from data_types.vector3 import Vector3
 from event import Event, EventMeta, EventStatus
 from spawn_helper import SpawnHelper
+from ui.wait_for_press import KeyWaiter
 
 
 @dataclass
@@ -102,7 +103,7 @@ class WaypointRace(Event):
                 self.competitor_has_begun = True
                 self.competitor_start_time = packet.game_info.seconds_elapsed
                 self.spawn_helper.clear_bots()
-                print(f"About to spawn {self.active_competitor.bundle.name} for WaypointRace.")
+                self.on_screen_log.log(f"About to spawn {self.active_competitor.bundle.name} for WaypointRace.")
                 completed_spawn = self.spawn_helper.spawn_bot(self.active_competitor.bundle)
                 self.competitor_packet_index = completed_spawn.packet_index
                 self.broadcast_to_bots(race_spec.to_json())
@@ -111,14 +112,17 @@ class WaypointRace(Event):
                     boost_amount=100
                 )}
                 self.game_interface.set_game_state(GameState(cars=cars))
+                self.hide_ball()
                 self.completed_waypoints_indices = []
             else:
+                race_time = packet.game_info.seconds_elapsed - self.competitor_start_time
                 self.renderer.begin_rendering('waypoints')
                 competitor_pos = Vector3.from_vec(packet.game_cars[self.competitor_packet_index].physics.location)
                 for idx, w in enumerate(race_spec.waypoints):
                     if idx not in self.completed_waypoints_indices:
                         if w.dist(competitor_pos) < race_spec.waypoint_tolerance:
                             self.completed_waypoints_indices.append(idx)
+                            self.on_screen_log.log(f"Got waypoint {len(self.completed_waypoints_indices)} / {len(race_spec.waypoints)}! Time so far: {race_time}")
                     color = self.renderer.lime() if idx in self.completed_waypoints_indices else self.renderer.yellow()
                     self.render_sphere(w, race_spec.waypoint_tolerance / 2, color)
                 self.render_sphere(competitor_pos, race_spec.waypoint_tolerance / 2, self.renderer.cyan())
@@ -127,12 +131,15 @@ class WaypointRace(Event):
                 if waypoints_complete:
                     race_time = packet.game_info.seconds_elapsed - self.competitor_start_time
                     self.event_doc.result_times[self.active_competitor.bundle.config_path] = race_time
+                    self.on_screen_log.log(f"{self.active_competitor.bundle.name} has finished with a time of {race_time}")
                     self.save_doc()
                     self.active_competitor = None
         else:
             for competitor in self.competitors:
                 if competitor.bundle.config_path not in self.event_doc.result_times:
                     self.active_competitor = competitor
+                    KeyWaiter().wait_for_press('k', f'start race with {self.active_competitor.bundle.name}', self.renderer)
+                    break
 
         competitors_lacking_times = [c for c in self.competitors if c.bundle.config_path not in self.event_doc.result_times]
         return EventStatus(is_complete=len(competitors_lacking_times) == 0)

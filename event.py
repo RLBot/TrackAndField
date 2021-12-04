@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rlbot.matchcomms.client import MatchcommsClient
+from rlbot.utils.game_state_util import GameState, BallState, Physics, Vector3 as Vector3GS
 from rlbot.utils.packetanalysis.valid_packet_detector import ValidPacketDetector
 from rlbot.utils.rendering.rendering_manager import RenderingManager
 from rlbot.utils.structures.game_data_struct import GameTickPacket
@@ -22,6 +23,7 @@ from typing import List
 # and takes over?
 from data_types.vector3 import Vector3
 from spawn_helper import SpawnHelper
+from ui.on_screen_log import OnScreenLog
 
 
 @dataclass
@@ -44,6 +46,7 @@ class Event:
         self.spawn_helper: SpawnHelper = None
         self.game_interface: GameInterface = None
         self.renderer: RenderingManager = None
+        self.on_screen_log: OnScreenLog = None
         self.competitors: List[Competitor] = []
         self.competition_dir: Path = None
         self.event_meta: EventMeta = None
@@ -67,6 +70,7 @@ class Event:
         self.spawn_helper = spawn_helper
         self.game_interface = game_interface
         self.renderer = self.game_interface.renderer
+        self.on_screen_log = OnScreenLog(self.renderer, 4, 20, 400, 1, self.renderer.white())
         self.event_meta = doc
 
     def tick_event(self, packet: GameTickPacket) -> EventStatus:
@@ -74,6 +78,10 @@ class Event:
 
     def broadcast_to_bots(self, json_text):
         self.spawn_helper.matchcomms.outgoing_broadcast.put_nowait(json_text)
+
+    def hide_ball(self):
+        self.game_interface.set_game_state(GameState(ball=BallState(physics=Physics(
+            location=Vector3GS(0, 0, -500), velocity=Vector3GS(0, 0, 0), angular_velocity=Vector3GS(0, 0, 0)))))
 
     def render_sphere(self, center: Vector3, radius: float, color):
         num_pts = 16
