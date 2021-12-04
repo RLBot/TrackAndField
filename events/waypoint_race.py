@@ -80,7 +80,9 @@ class WaypointRace(Event):
 
         if self.active_competitor is not None:
             if not self.competitor_has_begun and packet.game_info.is_round_active:
+                self.competitor_has_begun = True
                 self.spawn_helper.clear_bots()
+                print(f"About to spawn {self.active_competitor.bundle.name} for WaypointRace.")
                 completed_spawn = self.spawn_helper.spawn_bot(self.active_competitor.bundle)
                 competitor_packet_index = completed_spawn.packet_index
                 self.spawn_helper.matchcomms.outgoing_broadcast.put_nowait(self.event_doc.race_spec.to_json())
@@ -89,7 +91,6 @@ class WaypointRace(Event):
                     boost_amount=100
                 )}
                 self.game_interface.set_game_state(GameState(cars=cars))
-                self.competitor_has_begun = True
             else:
                 # TODO: watch the packet and keep track of whether the bot has reached all the waypoints
                 pass

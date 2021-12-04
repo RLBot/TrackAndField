@@ -7,6 +7,7 @@ from rlbot.matchconfig.match_config import EmptyPlayerSlot, PlayerConfig, MatchC
 from rlbot.parsing.bot_config_bundle import BotConfigBundle
 from rlbot.setup_manager import SetupManager
 from rlbot.utils.structures.game_data_struct import GameTickPacket
+from rlbot.utils.structures.game_interface import GameInterface
 
 
 @dataclass
@@ -62,9 +63,10 @@ def index_from_spawn_id(packet: GameTickPacket, spawn_id: int):
 
 class SpawnHelper:
 
-    def __init__(self):
+    def __init__(self, game_interface: GameInterface):
         self.active_bots: List[ActiveBot] = []
         self.setup_manager = SetupManager()
+        self.setup_manager.game_interface = game_interface
         self.setup_manager.num_participants = 0
         self.setup_manager.launch_bot_processes(MatchConfig())
         self.matchcomms = MatchcommsClient(self.setup_manager.matchcomms_server.root_url) # This must come after launch_bot_processes

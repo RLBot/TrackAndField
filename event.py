@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rlbot.matchcomms.client import MatchcommsClient
+from rlbot.utils.packetanalysis.valid_packet_detector import ValidPacketDetector
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 from rlbot.utils.structures.game_interface import GameInterface
 

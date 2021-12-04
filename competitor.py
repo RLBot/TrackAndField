@@ -12,3 +12,6 @@ class Competitor:
     @staticmethod
     def from_config_path(path: str):
         return Competitor(bundle=get_bot_config_bundle(path))
+
+    def __str__(self):
+        return self.bundle.name

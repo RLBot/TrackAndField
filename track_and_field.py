@@ -38,10 +38,38 @@ class CompetitionDocument(DataClassJSONMixin):
 class TrackAndField(BaseScript):
     def __init__(self, doc: CompetitionDocument):
         super().__init__("Track and Field")
-        self.spawn_helper = SpawnHelper()
+        self.screen_log: List[str] = []
+        self.log_to_screen("Welcome to Track and Field!")
+        self.spawn_helper = SpawnHelper(self.game_interface)
         self.competition_document = doc
+        self.wait_for_game_stabilization()
         self.events: List[Event] = [self.construct_and_load(d) for d in doc.event_documents]
         self.event_index = 0
+
+    def log_to_screen(self, text: str):
+        self.screen_log.append(text)
+        self.logger.info(text)
+        while len(self.screen_log) > 4:
+            self.screen_log = self.screen_log[1:]
+        self.renderer.begin_rendering("track_n_field_log")
+        self.renderer.draw_string_2d(20, 20, 2, 2, "\n".join(self.screen_log), self.renderer.yellow())
+        self.renderer.end_rendering()
+
+    def wait_for_game_stabilization(self):
+        """
+        Bots will be waiting to see their own spawn_id in the packet. Once they see it once, they'll be ready
+        to retire when it disappears / when the car de-spawns. Wait for long enough to make sure they see it.
+        """
+        for _ in range(20):
+            packet = self.get_game_tick_packet()
+            if packet.game_info.is_round_active:
+                time.sleep(1.5)
+                self.log_to_screen("Clearing bots to prepare for track and field.")
+                self.spawn_helper.clear_bots()
+                self.log_to_screen("Bots cleared, waiting for processes to die...")
+                time.sleep(3)
+                break
+            time.sleep(.5)
 
     def construct_event(self, event_type: str) -> Event:
         if event_type == 'WaypointRace':
@@ -53,40 +81,45 @@ class TrackAndField(BaseScript):
         return event
 
     def run(self):
-
+        self.log_to_screen(f"Running {len(self.events)} track and field events...")
+        active_event: Event = None
         while True:
             packet = self.wait_game_tick_packet()
 
-            active_event = self.events[self.event_index]
+            if active_event is None:
+                active_event = self.events[self.event_index]
+                self.log_to_screen(f"Event: {active_event.name}")
+                # TODO: go into some kindof pause mode until the user
+                # manually advances to the next event with some kind of command.
+
             event_status = active_event.tick_event(packet)
             if event_status.is_complete:
                 self.event_index += 1
-                next_event = self.events[self.event_index]
-                color = self.renderer.white()
-                text = f"Event: {next_event.name}"
-                self.game_interface.renderer.begin_rendering("tracknfield")
-                self.game_interface.renderer.draw_string_2d(20, 20, 2, 2, text, color)
-                self.game_interface.renderer.end_rendering()
-                # TODO: go into some kindof pause mode until the user
-                # manually advances to the next event with some kind of command.
+                active_event = None
 
 
 if __name__ == "__main__":
     competitors: List[Competitor] = load_competitors()
 
-    current_competition_file = Path("./data/current_competition.json")
+    data_dir = Path(__file__).parent / "data"
+    current_competition_file = data_dir / "current_competition.json"
     if current_competition_file.exists():
 
         # Load the file
+        print(f"Current competition file already exists at {current_competition_file.absolute()}")
         doc = CompetitionDocument.from_json(current_competition_file.read_text())
 
-        # TODO: Validate that either competitors are empty or they match
-        # the expectation of the competition file
+        if len(competitors) > 0:
+            comp_config_files = [k.bundle.config_path for k in competitors]
+            if doc.competitor_cfg_files != comp_config_files:
+                raise ValueError(f"Competitors from RLBotGUI ({comp_config_files}) do not match competitors in doc"
+                                 f" ({doc.competitor_cfg_files}). If you want to start fresh, remove or rename"
+                                 f" {current_competition_file.absolute()}")
     else:
 
         events = [WaypointRace()]
         time_str = time.strftime("%Y-%m-%dT%H-%M-%S")
-        competition_dir = Path(f"./data/{time_str}")
+        competition_dir = data_dir / time_str
         competition_dir.mkdir(parents=True, exist_ok=True)
         event_docs = [e.init_event(competitors, competition_dir) for e in events]
 
