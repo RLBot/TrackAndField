@@ -87,6 +87,9 @@ class TrackAndField(BaseScript):
             packet = self.wait_game_tick_packet()
 
             if active_event is None:
+                if self.event_index >= len(self.events):
+                    self.log_to_screen("Finished all Track and Field events!")
+                    exit(0)
                 active_event = self.events[self.event_index]
                 self.log_to_screen(f"Event: {active_event.name}")
                 # TODO: go into some kindof pause mode until the user

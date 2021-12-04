@@ -1,8 +1,10 @@
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
 from rlbot.matchcomms.client import MatchcommsClient
 from rlbot.utils.packetanalysis.valid_packet_detector import ValidPacketDetector
+from rlbot.utils.rendering.rendering_manager import RenderingManager
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 from rlbot.utils.structures.game_interface import GameInterface
 
@@ -18,6 +20,7 @@ from typing import List
 # How do we choose bots for the event? Can the user just drag bots onto teams
 # in RLBotGUI, start a fake match with the script active, and the script hooks
 # and takes over?
+from data_types.vector3 import Vector3
 from spawn_helper import SpawnHelper
 
 
@@ -33,7 +36,6 @@ class EventStatus:
 
 
 # TODO: give events access to matchcomms, provide helpers for:
-# - Spawning bots
 # - Telling them what to do via matchcomms
 # - Rendering basic stuff to show event status
 class Event:
@@ -41,8 +43,10 @@ class Event:
         self.name: str = None
         self.spawn_helper: SpawnHelper = None
         self.game_interface: GameInterface = None
+        self.renderer: RenderingManager = None
         self.competitors: List[Competitor] = []
         self.competition_dir: Path = None
+        self.event_meta: EventMeta = None
 
     def init_event(self, competitors: List[Competitor], competition_dir: Path) -> EventMeta:
         self.competitors = competitors
@@ -62,6 +66,29 @@ class Event:
         """
         self.spawn_helper = spawn_helper
         self.game_interface = game_interface
+        self.renderer = self.game_interface.renderer
+        self.event_meta = doc
 
     def tick_event(self, packet: GameTickPacket) -> EventStatus:
         raise NotImplementedError
+
+    def broadcast_to_bots(self, json_text):
+        self.spawn_helper.matchcomms.outgoing_broadcast.put_nowait(json_text)
+
+    def render_sphere(self, center: Vector3, radius: float, color):
+        num_pts = 16
+
+        equator = [center + Vector3(
+            radius * math.sin(2 * math.pi * i / num_pts),
+            radius * math.cos(2 * math.pi * i / num_pts),
+            0
+        ) for i in range(num_pts + 1)]
+
+        vertical = [center + Vector3(
+            radius * math.sin(2 * math.pi * i / num_pts),
+            0,
+            radius * math.cos(2 * math.pi * i / num_pts)
+        ) for i in range(num_pts + 1)]
+
+        self.renderer.draw_polyline_3d(equator, color)
+        self.renderer.draw_polyline_3d(vertical, color)
