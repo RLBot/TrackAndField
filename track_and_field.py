@@ -93,6 +93,13 @@ class TrackAndField(BaseScript):
                 active_event = None
 
 
+def get_event_list():
+    """
+    These are the track and field events which will be initialized for new competitions.
+    """
+    return [WaypointRace()]
+
+
 if __name__ == "__main__":
     competitors: List[Competitor] = load_competitors()
 
@@ -111,8 +118,7 @@ if __name__ == "__main__":
                                  f" ({doc.competitor_cfg_files}). If you want to start fresh, remove or rename"
                                  f" {current_competition_file.absolute()}")
     else:
-
-        events = [WaypointRace()]
+        events = get_event_list()
         time_str = time.strftime("%Y-%m-%dT%H-%M-%S")
         competition_dir = data_dir / time_str
         competition_dir.mkdir(parents=True, exist_ok=True)

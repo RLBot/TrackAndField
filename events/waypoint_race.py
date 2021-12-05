@@ -1,3 +1,24 @@
+"""
+Bot makers:
+
+To support this event type, you must listen on matchcomms for an event shaped like this (see RaceSpecification):
+{
+  "event_type": "WaypointRace",
+  "waypoints": [{"x": 514.0, "y": 1266.0, "z": 486.0}],
+  "waypoint_tolerance": 100.0,
+  "start": {
+    "location": {"x": 0.0, "y": -8000.0, "z": 50.0},
+    "rotation": {"pitch": 0.0, "yaw": 1.5707963267948966, "roll": 0.0},
+    "velocity": {"x": 0.0, "y": 0.0, "z": 0.0},
+    "angular_velocity": {"x": 0.0, "y": 0.0, "z": 0.0}
+  }
+}
+
+Visit the waypoints as fast as possible, in any order that you wish. You will be scored based on the total time.
+The center of the car (its 'location' in the game tick packet) must get within a distance of waypoint_tolerance
+from a particular waypoint to satisfy it.
+"""
+
 import math
 from dataclasses import dataclass
 from pathlib import Path
