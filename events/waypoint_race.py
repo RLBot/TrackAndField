@@ -152,30 +152,35 @@ class WaypointRace(Event):
                         if w.dist(competitor_pos) < race_spec.waypoint_tolerance:
                             self.completed_waypoints_indices.append(idx)
                             self.on_screen_log.log(
-                                f"Got waypoint {len(self.completed_waypoints_indices)} / {len(race_spec.waypoints)}! Time so far: {race_time}")
+                                f"Got waypoint {len(self.completed_waypoints_indices)} / {len(race_spec.waypoints)}! Time so far: {race_time:.3f}")
                     color = self.renderer.lime() if idx in self.completed_waypoints_indices else self.renderer.yellow()
                     self.render_sphere(w, race_spec.waypoint_tolerance / 2, color)
                 self.render_sphere(competitor_pos, race_spec.waypoint_tolerance / 2, self.renderer.cyan())
+                self.renderer.draw_string_2d(500, 20, 3, 3, f"{self.active_competitor.name()}: {race_time:.3f} s", self.renderer.cyan())
                 self.renderer.end_rendering()
                 waypoints_complete = len(self.completed_waypoints_indices) >= len(race_spec.waypoints)
                 if waypoints_complete:
                     race_time = packet.game_info.seconds_elapsed - self.competitor_start_time
                     self.event_doc.result_times[self.active_competitor.bundle.config_path] = race_time
                     self.on_screen_log.log(
-                        f"{self.active_competitor.bundle.name} has finished with a time of {race_time}")
+                        f"{self.active_competitor.name()} has finished with a time of {race_time:.3f}")
                     self.save_doc()
                     self.active_competitor = None
         else:
             for competitor in self.competitors:
                 if competitor.bundle.config_path not in self.event_doc.result_times:
                     self.active_competitor = competitor
-                    KeyWaiter().wait_for_press('k', f'start race with {self.active_competitor.bundle.name}',
+                    KeyWaiter().wait_for_press('k', f'start race with {self.active_competitor.name()}',
                                                self.renderer)
                     break
 
         competitors_lacking_times = [c for c in self.competitors if
                                      c.bundle.config_path not in self.event_doc.result_times]
-        return EventStatus(is_complete=len(competitors_lacking_times) == 0)
+        is_complete = len(competitors_lacking_times) == 0
+        if is_complete:
+            self.renderer.clear_screen('waypoints')
+            self.on_screen_log.clear()
+        return EventStatus(is_complete=is_complete)
 
     def start_new_competitor(self, packet):
         """
@@ -184,7 +189,7 @@ class WaypointRace(Event):
         race_spec = self.event_doc.race_spec
         self.competitor_start_time = packet.game_info.seconds_elapsed
         self.spawn_helper.clear_bots()
-        self.on_screen_log.log(f"About to spawn {self.active_competitor.bundle.name} for WaypointRace.")
+        self.on_screen_log.log(f"About to spawn {self.active_competitor.name()} for WaypointRace.")
         completed_spawn = self.spawn_helper.spawn_bot(self.active_competitor.bundle)
         self.competitor_packet_index = completed_spawn.packet_index
         self.broadcast_to_bots(race_spec.to_json())

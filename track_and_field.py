@@ -1,3 +1,4 @@
+import signal
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,9 +45,15 @@ class TrackAndField(BaseScript):
         self.wait_for_game_stabilization()
         self.events: List[Event] = [self.construct_and_load(d) for d in doc.event_documents]
         self.event_index = 0
+        # The signal handling doesn't seem to work for me :(
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
 
     def log_to_screen(self, text: str):
         self.on_screen_log.log(text)
+
+    def exit_gracefully(self):
+        self.logger.info("Exiting gracefully.")
+        self.renderer.clear_all_touched_render_groups()
 
     def wait_for_game_stabilization(self):
         """
@@ -82,6 +89,8 @@ class TrackAndField(BaseScript):
             if active_event is None:
                 if self.event_index >= len(self.events):
                     self.on_screen_log.log("Finished all Track and Field events!")
+                    KeyWaiter().wait_for_press('q', 'quit', self.renderer)
+                    self.exit_gracefully()
                     exit(0)
                 active_event = self.events[self.event_index]
                 self.on_screen_log.log(f"Event: {active_event.name}")

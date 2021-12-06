@@ -13,5 +13,8 @@ class Competitor:
     def from_config_path(path: str):
         return Competitor(bundle=get_bot_config_bundle(path))
 
-    def __str__(self):
+    def name(self):
         return self.bundle.name
+
+    def __str__(self):
+        return self.name()
