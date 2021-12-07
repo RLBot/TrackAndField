@@ -1,3 +1,5 @@
+import json
+import queue
 import time
 from dataclasses import dataclass
 from random import randint
@@ -90,6 +92,17 @@ class SpawnHelper:
         self.launch_match(match_config)
         packet = GameTickPacket()
         self.setup_manager.game_interface.update_live_data_packet(packet)
+
+        try:
+            for _ in range(10):
+                message = self.matchcomms.incoming_broadcast.get(block=True, timeout=7)
+                message_dict = json.loads(message)
+                if message_dict.get("readyForTrackAndField", False):
+                    # The bot claims to be ready, continue.
+                    break
+        except queue.Empty:
+            print(f"{bundle.name} never sent a 'ready' message, proceeding anyway.")
+
         return CompletedSpawn(bot=active_bot, packet_index=index_from_spawn_id(packet, active_bot.spawn_id))
 
     def clear_bots(self):

@@ -103,7 +103,7 @@ class WaypointRace(Event):
 
         waypoints = [get_random_waypoint() for _ in range(4)]
         start_point = Physics(
-            location=Vector3(0, -8000, 50),
+            location=Vector3(0, -6000, 50),
             rotation=Rotator(0, math.pi / 2, 0),
             velocity=Vector3(0, 0, 0),
             angular_velocity=Vector3(0, 0, 0))
@@ -197,6 +197,7 @@ class WaypointRace(Event):
             physics=race_spec.start.to_gamestate(),
             boost_amount=100
         )}
+        # TODO: send this for multiple ticks while rendering a 3...2...1...GO countdown.
         self.game_interface.set_game_state(GameState(cars=cars))
         self.hide_ball()
         self.completed_waypoints_indices = []
