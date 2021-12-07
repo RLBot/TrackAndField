@@ -26,8 +26,11 @@ and and additional files in subfolders.
 
 ## Making Bots to Compete
 To compete in Track and Field, a bot must support
-[Matchcomms](https://github.com/RLBot/RLBot/wiki/Matchcomms), and it
-also needs to understand the messages associated with each event.
+[Matchcomms](https://github.com/RLBot/RLBot/wiki/Matchcomms).
+- Upon startup, the bot should send a message to matchcomms in this format:
+`{ "readyForTrackAndField": True, "supportedEvents": ["WaypointRace", "etc"] }`
+- The bot will then need to listen for message(s) from matchcomms regarding
+the event they're participating in.
 
 Each python file in the 'events' folder has specific documentation on
 the message(s) it sends and how a bot is expected to behave.

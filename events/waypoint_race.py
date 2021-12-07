@@ -189,10 +189,15 @@ class WaypointRace(Event):
         race_spec = self.event_doc.race_spec
         self.competitor_start_time = packet.game_info.seconds_elapsed
         self.spawn_helper.clear_bots()
-        self.on_screen_log.log(f"About to spawn {self.active_competitor.name()} for WaypointRace.")
+        bot_name = self.active_competitor.name()
+
+        self.on_screen_log.log(f"About to spawn {bot_name} for WaypointRace.")
         completed_spawn = self.spawn_helper.spawn_bot(self.active_competitor.bundle)
-        self.competitor_packet_index = completed_spawn.packet_index
+        supported_events = self.spawn_helper.listen_for_events_supported_by_bot(timeout=7)
+        self.is_event_supported(bot_name, supported_events)
         self.broadcast_to_bots(race_spec.to_json())
+
+        self.competitor_packet_index = completed_spawn.packet_index
         cars = {self.competitor_packet_index: CarState(
             physics=race_spec.start.to_gamestate(),
             boost_amount=100

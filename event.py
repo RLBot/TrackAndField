@@ -1,19 +1,15 @@
 import math
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List
 
-from rlbot.matchcomms.client import MatchcommsClient
+from mashumaro import DataClassJSONMixin
 from rlbot.utils.game_state_util import GameState, BallState, Physics, Vector3 as Vector3GS
-from rlbot.utils.packetanalysis.valid_packet_detector import ValidPacketDetector
 from rlbot.utils.rendering.rendering_manager import RenderingManager
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 from rlbot.utils.structures.game_interface import GameInterface
 
 from competitor import Competitor
-from mashumaro import DataClassJSONMixin
-from typing import List
-
-
 # What should an overall pentathlon script look like?
 # Python file that constructs a list of event objects?
 # Directory full of event config files?
@@ -78,6 +74,15 @@ class Event:
 
     def broadcast_to_bots(self, json_text):
         self.spawn_helper.matchcomms.outgoing_broadcast.put_nowait(json_text)
+
+    def is_event_supported(self, bot_name: str, events_supported_by_bot: List[str]):
+        event_type = self.event_meta.event_type
+        if self.event_meta.event_type in events_supported_by_bot:
+            self.on_screen_log.log(f"{bot_name} is ready and supports {event_type}!")
+            return True
+        else:
+            self.on_screen_log.log(f"{bot_name} doesn't seem to know about {event_type}, good luck to them...")
+            return False
 
     def hide_ball(self):
         self.game_interface.set_game_state(GameState(ball=BallState(physics=Physics(

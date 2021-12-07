@@ -20,6 +20,7 @@ class ActiveBot:
     spawn_id: int
     bundle: BotConfigBundle
 
+
 @dataclass
 class CompletedSpawn:
     bot: ActiveBot
@@ -72,7 +73,8 @@ class SpawnHelper:
         self.setup_manager.game_interface = game_interface
         self.setup_manager.num_participants = 0
         self.setup_manager.launch_bot_processes(MatchConfig())
-        self.matchcomms = MatchcommsClient(self.setup_manager.matchcomms_server.root_url) # This must come after launch_bot_processes
+        self.matchcomms = MatchcommsClient(
+            self.setup_manager.matchcomms_server.root_url)  # This must come after launch_bot_processes
 
     def _make_active_bot(self, bundle: BotConfigBundle, team: int):
         name = bundle.name
@@ -92,18 +94,32 @@ class SpawnHelper:
         self.launch_match(match_config)
         packet = GameTickPacket()
         self.setup_manager.game_interface.update_live_data_packet(packet)
+        return CompletedSpawn(
+            bot=active_bot,
+            packet_index=index_from_spawn_id(packet, active_bot.spawn_id)
+        )
 
+    def listen_for_events_supported_by_bot(self, timeout: int = 7) -> List[str]:
+        """
+        Bots which support Track and Field should please send a message to matchcomms
+        when they start up, shaped like this:
+        { "readyForTrackAndField": True, "supportedEvents": ["WaypointRace", "etc"] }
+
+        If they don't send it, we'll assume they don't support any. The event itself
+        will choose whether such bots can still try to participate.
+        """
+        supported_events = []
         try:
             for _ in range(10):
-                message = self.matchcomms.incoming_broadcast.get(block=True, timeout=7)
+                message = self.matchcomms.incoming_broadcast.get(block=True, timeout=timeout)
                 message_dict = json.loads(message)
                 if message_dict.get("readyForTrackAndField", False):
-                    # The bot claims to be ready, continue.
+                    # The bot claims to be ready.
+                    supported_events = message_dict.get("supportedEvents", [])
                     break
         except queue.Empty:
-            print(f"{bundle.name} never sent a 'ready' message, proceeding anyway.")
-
-        return CompletedSpawn(bot=active_bot, packet_index=index_from_spawn_id(packet, active_bot.spawn_id))
+            print(f"Bot never sent a 'ready' message, proceeding anyway.")
+        return supported_events
 
     def clear_bots(self):
         self.active_bots = []
