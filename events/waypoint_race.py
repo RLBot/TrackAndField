@@ -172,6 +172,7 @@ class WaypointRace(Event):
             for competitor in self.competitors:
                 if competitor.bundle.config_path not in self.event_doc.result_times:
                     self.active_competitor = competitor
+                    self.competitor_has_begun = False
                     if self.time_lord is not None:
                         self.time_lord.cleanup()
                     KeyWaiter().wait_for_press('k', f'start race with {self.active_competitor.name()}',
