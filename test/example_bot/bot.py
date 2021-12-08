@@ -1,4 +1,3 @@
-import json
 from queue import Empty
 from typing import List
 
@@ -27,8 +26,8 @@ class MyBot(BaseAgent):
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
 
         # Now we set up a json to let Track and Field know we can play waypointrace and are ready to go, then send it.
-        json_str = json.dumps({"readyForTrackAndField": True, "supportedEvents": ["WaypointRace"]})
-        self.matchcomms.outgoing_broadcast.put_nowait(json_str)
+        message = {"readyForTrackAndField": True, "supportedEvents": ["WaypointRace"]}
+        self.matchcomms.outgoing_broadcast.put_nowait(message)
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         """
@@ -37,11 +36,10 @@ class MyBot(BaseAgent):
         """
         try:
             message = self.matchcomms.incoming_broadcast.get_nowait()  # Try to get all of the data from Track and Field
-            message_dict = json.loads(message)
-            if message_dict.get("event_type") == 'WaypointRace':
+            if message.get("event_type") == 'WaypointRace':
                 print("Got waypoints, starting up now!")  # We have the waypoints now, lets start this thing up!
-                waypoints = [Vec3(w['x'], w['y'], w['z']) for w in message_dict["waypoints"]]
-                waypoint_tolerance = message_dict["waypoint_tolerance"]
+                waypoints = [Vec3(w['x'], w['y'], w['z']) for w in message["waypoints"]]
+                waypoint_tolerance = message["waypoint_tolerance"]
                 self.active_sequence = Sequence([
                     RunWaypointRace(waypoints, waypoint_tolerance, self)
                 ])
