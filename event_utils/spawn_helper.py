@@ -1,4 +1,3 @@
-import json
 import queue
 import time
 from dataclasses import dataclass
@@ -112,10 +111,9 @@ class SpawnHelper:
         try:
             for _ in range(10):
                 message = self.matchcomms.incoming_broadcast.get(block=True, timeout=timeout)
-                message_dict = json.loads(message)
-                if message_dict.get("readyForTrackAndField", False):
+                if message.get("readyForTrackAndField", False):
                     # The bot claims to be ready.
-                    supported_events = message_dict.get("supportedEvents", [])
+                    supported_events = message.get("supportedEvents", [])
                     break
         except queue.Empty:
             print(f"Bot never sent a 'ready' message, proceeding anyway.")

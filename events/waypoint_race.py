@@ -200,7 +200,7 @@ class WaypointRace(Event):
         completed_spawn = self.spawn_helper.spawn_bot(self.active_competitor.bundle)
         supported_events = self.spawn_helper.listen_for_events_supported_by_bot(timeout=7)
         self.is_event_supported(bot_name, supported_events)
-        self.broadcast_to_bots(race_spec.to_json())
+        self.broadcast_to_bots(race_spec.to_dict())
 
         self.competitor_packet_index = completed_spawn.packet_index
         cars = {self.competitor_packet_index: CarState(
