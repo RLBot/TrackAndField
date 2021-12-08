@@ -18,7 +18,7 @@ from competitor import Competitor
 # in RLBotGUI, start a fake match with the script active, and the script hooks
 # and takes over?
 from data_types.vector3 import Vector3
-from spawn_helper import SpawnHelper
+from event_utils.spawn_helper import SpawnHelper
 from ui.on_screen_log import OnScreenLog
 
 

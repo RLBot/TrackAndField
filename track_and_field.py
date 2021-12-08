@@ -11,8 +11,8 @@ from rlbot_gui.gui import get_team_settings
 
 from competitor import Competitor
 from event import Event, EventMeta
+from event_utils.spawn_helper import SpawnHelper
 from events.waypoint_race import WaypointRace
-from spawn_helper import SpawnHelper
 from ui.on_screen_log import OnScreenLog
 from ui.wait_for_press import KeyWaiter
 

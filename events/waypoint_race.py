@@ -35,7 +35,8 @@ from data_types.physics import Physics
 from data_types.rotator import Rotator
 from data_types.vector3 import Vector3
 from event import Event, EventMeta, EventStatus
-from spawn_helper import SpawnHelper
+from event_utils.spawn_helper import SpawnHelper
+from event_utils.time_lord import TimeLord
 from ui.wait_for_press import KeyWaiter
 
 
@@ -70,9 +71,9 @@ class WaypointRace(Event):
         self.event_doc: EventDocument = None
         self.active_competitor: Competitor = None
         self.competitor_has_begun = False
-        self.competitor_start_time: float = 0
         self.competitor_packet_index: int = None
         self.completed_waypoints_indices: List[int] = []
+        self.time_lord: TimeLord = None
 
     def load_event(self, doc: EventMeta, spawn_helper: SpawnHelper, game_interface: GameInterface) -> None:
         """
@@ -103,7 +104,7 @@ class WaypointRace(Event):
 
         waypoints = [get_random_waypoint() for _ in range(4)]
         start_point = Physics(
-            location=Vector3(0, -6000, 50),
+            location=Vector3(0, -4000, 50),
             rotation=Rotator(0, math.pi / 2, 0),
             velocity=Vector3(0, 0, 0),
             angular_velocity=Vector3(0, 0, 0))
@@ -141,10 +142,13 @@ class WaypointRace(Event):
 
         if self.active_competitor is not None:
             if not self.competitor_has_begun and packet.game_info.is_round_active:
-                self.start_new_competitor(packet)
+                self.start_new_competitor()
                 self.competitor_has_begun = True
+                self.time_lord = TimeLord(self.competitor_packet_index, race_spec.start.location,
+                                          race_spec.start.rotation, self.game_interface)
             else:
-                race_time = packet.game_info.seconds_elapsed - self.competitor_start_time
+                self.time_lord.tick(packet)
+                race_time = self.time_lord.get_event_elapsed_time(packet)
                 self.renderer.begin_rendering('waypoints')
                 competitor_pos = Vector3.from_vec(packet.game_cars[self.competitor_packet_index].physics.location)
                 for idx, w in enumerate(race_spec.waypoints):
@@ -156,11 +160,9 @@ class WaypointRace(Event):
                     color = self.renderer.lime() if idx in self.completed_waypoints_indices else self.renderer.yellow()
                     self.render_sphere(w, race_spec.waypoint_tolerance / 2, color)
                 self.render_sphere(competitor_pos, race_spec.waypoint_tolerance / 2, self.renderer.cyan())
-                self.renderer.draw_string_2d(500, 20, 3, 3, f"{self.active_competitor.name()}: {race_time:.3f} s", self.renderer.cyan())
                 self.renderer.end_rendering()
                 waypoints_complete = len(self.completed_waypoints_indices) >= len(race_spec.waypoints)
                 if waypoints_complete:
-                    race_time = packet.game_info.seconds_elapsed - self.competitor_start_time
                     self.event_doc.result_times[self.active_competitor.bundle.config_path] = race_time
                     self.on_screen_log.log(
                         f"{self.active_competitor.name()} has finished with a time of {race_time:.3f}")
@@ -170,6 +172,8 @@ class WaypointRace(Event):
             for competitor in self.competitors:
                 if competitor.bundle.config_path not in self.event_doc.result_times:
                     self.active_competitor = competitor
+                    if self.time_lord is not None:
+                        self.time_lord.cleanup()
                     KeyWaiter().wait_for_press('k', f'start race with {self.active_competitor.name()}',
                                                self.renderer)
                     break
@@ -180,14 +184,15 @@ class WaypointRace(Event):
         if is_complete:
             self.renderer.clear_screen('waypoints')
             self.on_screen_log.clear()
+            if self.time_lord is not None:
+                self.time_lord.cleanup()
         return EventStatus(is_complete=is_complete)
 
-    def start_new_competitor(self, packet):
+    def start_new_competitor(self):
         """
         Based on self.active_competitor, spawns them into the game and positions them at the beginning of the race.
         """
         race_spec = self.event_doc.race_spec
-        self.competitor_start_time = packet.game_info.seconds_elapsed
         self.spawn_helper.clear_bots()
         bot_name = self.active_competitor.name()
 
@@ -202,7 +207,6 @@ class WaypointRace(Event):
             physics=race_spec.start.to_gamestate(),
             boost_amount=100
         )}
-        # TODO: send this for multiple ticks while rendering a 3...2...1...GO countdown.
         self.game_interface.set_game_state(GameState(cars=cars))
         self.hide_ball()
         self.completed_waypoints_indices = []
