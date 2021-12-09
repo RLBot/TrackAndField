@@ -198,7 +198,7 @@ class WaypointRace(Event):
         bot_name = self.active_competitor.name()
 
         self.on_screen_log.log(f"About to spawn {bot_name} for WaypointRace.")
-        completed_spawn = self.spawn_helper.spawn_bot(self.active_competitor.bundle)
+        completed_spawn = self.spawn_helper.spawn_bots([self.active_competitor.bundle])[0]
         supported_events = self.spawn_helper.listen_for_events_supported_by_bot(timeout=7)
         self.is_event_supported(bot_name, supported_events)
         self.broadcast_to_bots(race_spec.to_dict())

@@ -11,7 +11,14 @@ class TimeLord:
     Freezes a car in a particular place during the countdown to an event, then keeps track of elapsed time.
     """
 
-    def __init__(self, packet_index: int, position: Vector3, rotation: Rotator, game_interface: GameInterface):
+    def __init__(
+        self,
+        packet_index: int,
+        position: Vector3,
+        rotation: Rotator,
+        game_interface: GameInterface,
+        countdown_seconds=3,
+    ):
         self.packet_index = packet_index
         self.position = position
         self.rotation = rotation
@@ -22,7 +29,7 @@ class TimeLord:
         self.done_animating = False
         self.already_rendered = []
         self.render_group = "countdown"
-        self.countdown_seconds = 3
+        self.countdown_seconds = countdown_seconds
 
     def get_event_elapsed_time(self, packet: GameTickPacket):
         return packet.game_info.seconds_elapsed - self.event_start_time
@@ -35,7 +42,7 @@ class TimeLord:
         countdown_elapsed = packet.game_info.seconds_elapsed - self.countdown_start_time
         event_elapsed = countdown_elapsed - self.countdown_seconds
         if countdown_elapsed < self.countdown_seconds:
-            self.render_if_new(str(3 - int(countdown_elapsed)))
+            self.render_if_new(str(self.countdown_seconds - int(countdown_elapsed)))
             cars = {self.packet_index: CarState(
                 physics=Physics(
                     location=self.position.to_gamestate(),
