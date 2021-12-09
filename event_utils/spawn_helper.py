@@ -86,17 +86,17 @@ class SpawnHelper:
 
         return ActiveBot(unique_name, team, randint(1, 2 ** 31 - 1), bundle)
 
-    def spawn_bot(self, bundle: BotConfigBundle) -> CompletedSpawn:
-        active_bot = self._make_active_bot(bundle, 0)
-        self.active_bots.append(active_bot)
+    def spawn_bots(self, bundles: List[BotConfigBundle]) -> List[CompletedSpawn]:
+        new_active_bots = [self._make_active_bot(bundle, 0) for bundle in bundles]
+        self.active_bots += new_active_bots
         match_config = build_match_config(self.active_bots)
         self.launch_match(match_config)
         packet = GameTickPacket()
         self.setup_manager.game_interface.update_live_data_packet(packet)
-        return CompletedSpawn(
+        return [CompletedSpawn(
             bot=active_bot,
             packet_index=index_from_spawn_id(packet, active_bot.spawn_id)
-        )
+        ) for active_bot in new_active_bots]
 
     def listen_for_events_supported_by_bot(self, timeout: int = 7) -> List[str]:
         """

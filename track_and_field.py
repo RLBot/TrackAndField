@@ -12,6 +12,7 @@ from rlbot_gui.gui import get_team_settings
 from competitor import Competitor
 from event import Event, EventMeta
 from event_utils.spawn_helper import SpawnHelper
+from events.demolition_derby import DemolitionDerby
 from events.waypoint_race import WaypointRace
 from ui.on_screen_log import OnScreenLog
 from ui.wait_for_press import KeyWaiter
@@ -74,6 +75,8 @@ class TrackAndField(BaseScript):
     def construct_event(self, event_type: str) -> Event:
         if event_type == 'WaypointRace':
             return WaypointRace()
+        if event_type == 'DemolitionDerby':
+            return DemolitionDerby()
 
     def construct_and_load(self, event_doc: EventMeta) -> Event:
         event = self.construct_event(event_doc.event_type)
@@ -106,7 +109,7 @@ def get_event_list():
     """
     These are the track and field events which will be initialized for new competitions.
     """
-    return [WaypointRace()]
+    return [WaypointRace(), DemolitionDerby()]
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ class MyBot(BaseAgent):
         self.boost_pad_tracker.initialize_boosts(self.get_field_info())
 
         # Now we set up a json to let Track and Field know we can play waypointrace and are ready to go, then send it.
-        message = {"readyForTrackAndField": True, "supportedEvents": ["WaypointRace"]}
+        message = {"readyForTrackAndField": True, "supportedEvents": ["WaypointRace", "DemolitionDerby"]}
         self.matchcomms.outgoing_broadcast.put_nowait(message)
 
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
@@ -43,6 +43,8 @@ class MyBot(BaseAgent):
                 self.active_sequence = Sequence([
                     RunWaypointRace(waypoints, waypoint_tolerance, self)
                 ])
+            elif message.get("event_type") == "DemolitionDerby":
+                self.active_sequence = Sequence([RunDemolitionDerby(self)])
         except Empty:
             pass  # No message, no problem
 
@@ -85,3 +87,29 @@ class RunWaypointRace(Step):
         self.bot.renderer.draw_line_3d(car_location, target_location, self.bot.renderer.white())
 
         return StepResult(controls=controls, done=False)
+
+
+class RunDemolitionDerby(Step):
+    def __init__(self, bot: MyBot) -> None:
+        self.bot = bot
+    
+    def tick(self, packet: GameTickPacket) -> StepResult:
+        my_car = packet.game_cars[self.bot.index]
+        car_location = Vec3(my_car.physics.location)
+
+        # if we have boost, target the nearest other car, otherwise go for the nearest large boostpad
+        if my_car.boost > 30:
+            other_car_locations = [Vec3(car.physics.location) for car in packet.game_cars[:packet.num_cars]
+                if not car.is_demolished and car.spawn_id != my_car.spawn_id]
+            target_location = min(other_car_locations, key=lambda loc: loc.dist(car_location))
+        else:
+            target_location = min(self.bot.boost_pad_tracker.get_full_boosts(), key=lambda pad: pad.location.dist(car_location)).location
+
+        controls = SimpleControllerState()
+        controls.steer = steer_toward_target(my_car, target_location)
+        controls.throttle = 1.0
+        controls.boost = True
+
+        self.bot.renderer.draw_line_3d(car_location, target_location, self.bot.renderer.white())
+
+        return StepResult(controls=controls, done=my_car.is_demolished)
